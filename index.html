@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Chat App</title>
+<style>
+  body {
+    background-color: #e8f4f8;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .container {
+    width: 420px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
+  }
+
+  .login-box, .signup-box, .chat-box {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .active {
+    display: flex;
+  }
+
+  input, button {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    outline: none;
+  }
+
+  input:focus {
+    border-color: #00bcd4;
+  }
+
+  button {
+    background-color: #00bcd4;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background-color: #0198a9;
+  }
+
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+  }
+
+  .friends-section {
+    display: flex;
+    gap: 10px;
+  }
+
+  .friend-list, .request-list {
+    flex: 1;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+    max-height: 250px;
+    padding-right: 6px;
+  }
+
+  .friend, .request {
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .friend:hover, .request:hover {
+    background-color: #f1f1f1;
+  }
+
+  .friend.active {
+    background-color: #c6f6d5;
+  }
+
+  .messages {
+    overflow-y: auto;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+  }
+
+  .msg {
+    max-width: 80%;
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 10px;
+    word-wrap: break-word;
+  }
+
+  .sender {
+    background-color: #a5f3fc;
+    align-self: flex-start;
+  }
+
+  .receiver {
+    background-color: #fbcfe8;
+    align-self: flex-end;
+  }
+
+  .chat-input {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+  }
+
+  .chat-input input[type="text"] {
+    flex: 1;
+  }
+
+  img.chat-media {
+    max-width: 150px;
+    border-radius: 8px;
+    margin-top: 5px;
+  }
+
+  .link-btn {
+    color: #00bcd4;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .chat-top {
+    text-align: center;
+    background: #f0f9ff;
+    padding: 6px;
+    border-radius: 8px;
+    font-weight: bold;
+    margin-top: 5px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Signup -->
+  <div class="signup-box active" id="signupBox">
+    <h3>Create Account</h3>
+    <input type="text" id="signupUserId" placeholder="User ID" />
+    <input type="password" id="signupPassword" placeholder="Password" />
+    <button id="signupBtn">Sign Up</button>
+    <button class="link-btn" id="goToLogin">Already have an account? Login</button>
+  </div>
+
+  <!-- Login -->
+  <div class="login-box" id="loginBox">
+    <h3>Login</h3>
+    <input type="text" id="loginUserId" placeholder="User ID" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button class="link-btn" id="goToSignup">Create new account</button>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-box" id="chatBox">
+    <div class="chat-header">
+      <span id="currentUser"></span>
+      <button id="logoutBtn">Logout</button>
+    </div>
+
+    <div class="friends-section">
+      <div class="friend-list" id="friendList"></div>
+      <div class="request-list" id="requestList"></div>
+    </div>
+
+    <div id="chatWith" class="chat-top"></div>
+    <div id="chatContainer" class="messages"></div>
+
+    <div class="chat-input">
+      <input type="file" id="mediaInput" accept="image/*" />
+      <input type="text" id="messageInput" placeholder="Type a message..." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const signupBox = document.getElementById("signupBox");
+  const loginBox = document.getElementById("loginBox");
+  const chatBox = document.getElementById("chatBox");
+  const signupUserId = document.getElementById("signupUserId");
+  const signupPassword = document.getElementById("signupPassword");
+  const loginUserId = document.getElementById("loginUserId");
+  const loginPassword = document.getElementById("loginPassword");
+  const signupBtn = document.getElementById("signupBtn");
+  const loginBtn = document.getElementById("loginBtn");
+  const goToLogin = document.getElementById("goToLogin");
+  const goToSignup = document.getElementById("goToSignup");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const friendList = document.getElementById("friendList");
+  const requestList = document.getElementById("requestList");
+  const chatContainer = document.getElementById("chatContainer");
+  const messageInput = document.getElementById("messageInput");
+  const mediaInput = document.getElementById("mediaInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const currentUserLabel = document.getElementById("currentUser");
+  const chatWith = document.getElementById("chatWith");
+
+  let users = JSON.parse(localStorage.getItem("users")) || {};
+  let chats = JSON.parse(localStorage.getItem("chats")) || {};
+  let currentUser = null;
+  let activeChatUser = null;
+
+  function saveData() {
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("chats", JSON.stringify(chats));
+  }
+
+  function chatKey(u1, u2) {
+    return [u1, u2].sort().join("_");
+  }
+
+  // Signup
+  signupBtn.addEventListener("click", () => {
+    const id = signupUserId.value.trim();
+    const pass = signupPassword.value.trim();
+    if (!id || !pass) return alert("Enter details");
+    if (users[id]) return alert("User exists!");
+    users[id] = { password: pass, friends: [], requests: [] };
+    saveData();
+    alert("Account created!");
+    signupBox.classList.remove("active");
+    loginBox.classList.add("active");
+  });
+
+  // Login
+  loginBtn.addEventListener("click", () => {
+    const id = loginUserId.value.trim();
+    const pass = loginPassword.value.trim();
+    if (!users[id] || users[id].password !== pass) return alert("Invalid credentials!");
+    currentUser = id;
+    currentUserLabel.textContent = "Logged in as: " + currentUser;
+    loadFriends();
+    loadRequests();
+    loginBox.classList.remove("active");
+    chatBox.classList.add("active");
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    currentUser = null;
+    activeChatUser = null;
+    chatBox.classList.remove("active");
+    loginBox.classList.add("active");
+  });
+
+  goToLogin.addEventListener("click", () => {
+    signupBox.classList.remove("active");
+    loginBox.classList.add("active");
+  });
+
+  goToSignup.addEventListener("click", () => {
+    loginBox.classList.remove("active");
+    signupBox.classList.add("active");
+  });
+
+  function loadFriends() {
+    friendList.innerHTML = "";
+    const user = users[currentUser];
+
+    const friendsHeader = document.createElement("h4");
+    friendsHeader.textContent = "Friends";
+    friendList.appendChild(friendsHeader);
+
+    user.friends.forEach(f => {
+      const div = document.createElement("div");
+      div.className = "friend";
+      div.textContent = f;
+      div.onclick = () => {
+        document.querySelectorAll(".friend").forEach(el => el.classList.remove("active"));
+        div.classList.add("active");
+        activeChatUser = f;
+        chatWith.textContent = "Chatting with: " + f;
+        loadChat();
+      };
+      friendList.appendChild(div);
+    });
+
+    const allUsersHeader = document.createElement("h4");
+    allUsersHeader.textContent = "All Users";
+    friendList.appendChild(allUsersHeader);
+
+    const others = Object.keys(users).filter(u => u !== currentUser && !user.friends.includes(u));
+    others.forEach(o => {
+      const btn = document.createElement("button");
+      btn.textContent = "Add " + o;
+      btn.style.marginBottom = "5px";
+      btn.onclick = () => sendFriendRequest(o);
+      friendList.appendChild(btn);
+    });
+  }
+
+  function loadRequests() {
+    requestList.innerHTML = "<h4>Requests</h4>";
+    users[currentUser].requests.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "request";
+      div.textContent = r + " sent request ";
+      const acceptBtn = document.createElement("button");
+      acceptBtn.textContent = "Accept";
+      acceptBtn.onclick = () => acceptRequest(r);
+      div.appendChild(acceptBtn);
+      requestList.appendChild(div);
+    });
+  }
+
+  function sendFriendRequest(target) {
+    if (!users[target].requests.includes(currentUser)) {
+      users[target].requests.push(currentUser);
+      saveData();
+      alert("Friend request sent to " + target);
+    } else alert("Already sent!");
+  }
+
+  function acceptRequest(sender) {
+    users[currentUser].requests = users[currentUser].requests.filter(r => r !== sender);
+    users[currentUser].friends.push(sender);
+    users[sender].friends.push(currentUser);
+    saveData();
+    loadFriends();
+    loadRequests();
+    alert("You are now friends with " + sender);
+  }
+
+  function loadChat() {
+    chatContainer.innerHTML = "";
+    if (!currentUser || !activeChatUser) return;
+    const key = chatKey(currentUser, activeChatUser);
+    const messages = chats[key] || [];
+    messages.forEach(m => displayMessage(m));
+  }
+
+  sendBtn.addEventListener("click", async () => {
+    const text = messageInput.value.trim();
+    const file = mediaInput.files[0];
+    if (!activeChatUser) return alert("Select a friend to chat");
+    if (!text && !file) return;
+
+    const key = chatKey(currentUser, activeChatUser);
+    if (!chats[key]) chats[key] = [];
+
+    let msg = { sender: currentUser, text: text || "", media: null };
+    if (file) msg.media = await toBase64(file);
+
+    chats[key].push(msg);
+    saveData();
+    displayMessage(msg);
+    messageInput.value = "";
+    mediaInput.value = "";
+  });
+
+  function displayMessage(msg) {
+    const div = document.createElement("div");
+    div.classList.add("msg", msg.sender === currentUser ? "receiver" : "sender");
+    if (msg.text) div.textContent = msg.text;
+    if (msg.media) {
+      const img = document.createElement("img");
+      img.src = msg.media;
+      img.className = "chat-media";
+      div.appendChild(img);
+    }
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  function toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  }
+</script>
+</body>
+</html>
