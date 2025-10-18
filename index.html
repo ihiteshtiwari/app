@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Firebase Chat App</title>
-<!-- Bootstrap CDN -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
   body { background-color: #f0f8ff; }
-  .container { max-width: 700px; margin-top: 30px; }
+  .container { max-width: 900px; margin-top: 30px; }
   #chatContainer { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px; background: #fff; }
   .message { margin: 5px 0; padding: 6px 10px; border-radius: 10px; word-wrap: break-word; }
   .sender { background-color: #a5f3fc; align-self: flex-start; }
@@ -44,13 +43,16 @@
       <button id="logoutBtn" class="btn btn-danger btn-sm">Logout</button>
     </div>
 
-    <div class="row">
+    <div class="row mt-3">
       <div class="col-4">
+        <h6>Search Users</h6>
+        <input type="text" id="searchUser" class="form-control mb-2" placeholder="Search by name">
+
         <h6>Friends</h6>
-        <div id="friendList" class="d-flex flex-column gap-1"></div>
+        <div id="friendList" class="d-flex flex-column gap-1 mb-3"></div>
 
         <h6>All Users</h6>
-        <div id="allUsersList" class="d-flex flex-column gap-1"></div>
+        <div id="allUsersList" class="d-flex flex-column gap-1 mb-3"></div>
 
         <h6>Requests</h6>
         <div id="requestList" class="d-flex flex-column gap-1"></div>
@@ -71,211 +73,232 @@
 </div>
 
 <script type="module">
-  // Firebase imports
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getDatabase, ref, set, push, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDwiJVuByaincxun8h-uNgVQ0wwEiig3I8",
-    authDomain: "chatapp-11789.firebaseapp.com",
-    databaseURL: "https://chatapp-11789-default-rtdb.firebaseio.com",
-    projectId: "chatapp-11789",
-    storageBucket: "chatapp-11789.firebasestorage.app",
-    messagingSenderId: "82260267373",
-    appId: "1:82260267373:web:f5e51e1ecb95ba98b74a64",
-    measurementId: "G-SCSHS5X2XS"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDwiJVuByaincxun8h-uNgVQ0wwEiig3I8",
+  authDomain: "chatapp-11789.firebaseapp.com",
+  databaseURL: "https://chatapp-11789-default-rtdb.firebaseio.com",
+  projectId: "chatapp-11789",
+  storageBucket: "chatapp-11789.firebasestorage.app",
+  messagingSenderId: "82260267373",
+  appId: "1:82260267373:web:f5e51e1ecb95ba98b74a64",
+  measurementId: "G-SCSHS5X2XS"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getDatabase(app);
 
-  // DOM
-  const signupBox = document.getElementById("signupBox");
-  const loginBox = document.getElementById("loginBox");
-  const chatBox = document.getElementById("chatBox");
-  const signupUserId = document.getElementById("signupUserId");
-  const signupPassword = document.getElementById("signupPassword");
-  const loginUserId = document.getElementById("loginUserId");
-  const loginPassword = document.getElementById("loginPassword");
-  const signupBtn = document.getElementById("signupBtn");
-  const loginBtn = document.getElementById("loginBtn");
-  const goToLogin = document.getElementById("goToLogin");
-  const goToSignup = document.getElementById("goToSignup");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const currentUserLabel = document.getElementById("currentUserLabel");
-  const friendList = document.getElementById("friendList");
-  const allUsersList = document.getElementById("allUsersList");
-  const requestList = document.getElementById("requestList");
-  const chatWith = document.getElementById("chatWith");
-  const chatContainer = document.getElementById("chatContainer");
-  const messageInput = document.getElementById("messageInput");
-  const sendBtn = document.getElementById("sendBtn");
+const signupBox = document.getElementById("signupBox");
+const loginBox = document.getElementById("loginBox");
+const chatBox = document.getElementById("chatBox");
+const signupUserId = document.getElementById("signupUserId");
+const signupPassword = document.getElementById("signupPassword");
+const loginUserId = document.getElementById("loginUserId");
+const loginPassword = document.getElementById("loginPassword");
+const signupBtn = document.getElementById("signupBtn");
+const loginBtn = document.getElementById("loginBtn");
+const goToLogin = document.getElementById("goToLogin");
+const goToSignup = document.getElementById("goToSignup");
+const logoutBtn = document.getElementById("logoutBtn");
+const currentUserLabel = document.getElementById("currentUserLabel");
+const friendList = document.getElementById("friendList");
+const allUsersList = document.getElementById("allUsersList");
+const requestList = document.getElementById("requestList");
+const chatWith = document.getElementById("chatWith");
+const chatContainer = document.getElementById("chatContainer");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const searchUserInput = document.getElementById("searchUser");
 
-  let currentUser = null;
-  let activeChatUser = null;
+let currentUser = null;
+let activeChatUser = null;
 
-  function chatKey(u1, u2) { return [u1, u2].sort().join("_"); }
+function chatKey(u1, u2) { return [u1, u2].sort().join("_"); }
 
-  // Signup
-  signupBtn.addEventListener("click", async () => {
-    const id = signupUserId.value.trim();
-    const pass = signupPassword.value.trim();
-    if (!id || !pass) return alert("Enter details");
+// Signup
+signupBtn.addEventListener("click", async () => {
+  const id = signupUserId.value.trim();
+  const pass = signupPassword.value.trim();
+  if (!id || !pass) return alert("Enter details");
 
-    const snapshot = await get(ref(db, `users/${id}`));
-    if (snapshot.exists()) return alert("User exists!");
+  const snapshot = await get(ref(db, `users/${id}`));
+  if (snapshot.exists()) return alert("User exists!");
 
-    await set(ref(db, `users/${id}`), { password: pass, friends: [], requests: [] });
-    alert("Account created!");
-    signupBox.classList.add("d-none"); loginBox.classList.remove("d-none");
+  await set(ref(db, `users/${id}`), { password: pass, friends: [], requests: [] });
+  alert("Account created!");
+  signupBox.classList.add("d-none"); loginBox.classList.remove("d-none");
+});
+
+// Login
+loginBtn.addEventListener("click", async () => {
+  const id = loginUserId.value.trim();
+  const pass = loginPassword.value.trim();
+  if (!id || !pass) return alert("Enter details");
+
+  const snapshot = await get(ref(db, `users/${id}`));
+  if (!snapshot.exists() || snapshot.val().password !== pass) return alert("Invalid credentials!");
+
+  currentUser = id;
+  currentUserLabel.textContent = "Logged in as: " + currentUser;
+  loginBox.classList.add("d-none"); chatBox.classList.remove("d-none");
+
+  loadFriends();
+  loadRequests();
+});
+
+// Logout
+logoutBtn.addEventListener("click", () => {
+  currentUser = null; activeChatUser = null;
+  chatBox.classList.add("d-none"); loginBox.classList.remove("d-none");
+  chatContainer.innerHTML = "";
+});
+
+// Toggle signup/login
+goToLogin.addEventListener("click", () => { signupBox.classList.add("d-none"); loginBox.classList.remove("d-none"); });
+goToSignup.addEventListener("click", () => { loginBox.classList.add("d-none"); signupBox.classList.remove("d-none"); });
+
+// Load Friends and Users
+async function loadFriends() {
+  friendList.innerHTML = "";
+  allUsersList.innerHTML = "";
+
+  const snapshot = await get(ref(db, "users"));
+  const users = snapshot.val() || {};
+  const me = users[currentUser];
+
+  // Friends
+  me.friends.forEach(f => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-outline-success friend-btn";
+    btn.textContent = f;
+    btn.onclick = () => openChat(f);
+    friendList.appendChild(btn);
   });
 
-  // Login
-  loginBtn.addEventListener("click", async () => {
-    const id = loginUserId.value.trim();
-    const pass = loginPassword.value.trim();
-    if (!id || !pass) return alert("Enter details");
-
-    const snapshot = await get(ref(db, `users/${id}`));
-    if (!snapshot.exists() || snapshot.val().password !== pass) return alert("Invalid credentials!");
-
-    currentUser = id;
-    currentUserLabel.textContent = "Logged in as: " + currentUser;
-    loginBox.classList.add("d-none"); chatBox.classList.remove("d-none");
-
-    loadFriends();
-    loadRequests();
-  });
-
-  logoutBtn.addEventListener("click", () => {
-    currentUser = null; activeChatUser = null;
-    chatBox.classList.add("d-none"); loginBox.classList.remove("d-none");
-    chatContainer.innerHTML = "";
-  });
-
-  goToLogin.addEventListener("click", () => { signupBox.classList.add("d-none"); loginBox.classList.remove("d-none"); });
-  goToSignup.addEventListener("click", () => { loginBox.classList.add("d-none"); signupBox.classList.remove("d-none"); });
-
-  // Load Friends and Users
-  async function loadFriends() {
-    friendList.innerHTML = "";
-    allUsersList.innerHTML = "";
-
-    const snapshot = await get(ref(db, "users"));
-    const users = snapshot.val() || {};
-    const me = users[currentUser];
-
-    // Friends
-    me.friends.forEach(f => {
+  // Other users to send request
+  Object.keys(users).forEach(u => {
+    if (u !== currentUser && !me.friends.includes(u) && !(me.requests || []).includes(u)) {
       const btn = document.createElement("button");
-      btn.className = "btn btn-outline-success friend-btn";
-      btn.textContent = f;
-      btn.onclick = () => openChat(f);
-      friendList.appendChild(btn);
-    });
-
-    // Other users to send request
-    Object.keys(users).forEach(u => {
-      if (u !== currentUser && !me.friends.includes(u) && !(me.requests || []).includes(u)) {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-outline-primary friend-btn";
-        btn.textContent = "Add " + u;
-        btn.onclick = () => sendFriendRequest(u);
-        allUsersList.appendChild(btn);
-      }
-    });
-  }
-
-  async function loadRequests() {
-    requestList.innerHTML = "";
-    const snapshot = await get(ref(db, `users/${currentUser}/requests`));
-    const requests = snapshot.val() || [];
-
-    requests.forEach(async r => {
-      const div = document.createElement("div");
-      div.className = "d-flex justify-content-between align-items-center mb-1";
-      div.innerHTML = `<span>${r} sent request</span>`;
-      const btn = document.createElement("button");
-      btn.className = "btn btn-success btn-sm";
-      btn.textContent = "Accept";
-      btn.onclick = () => acceptRequest(r);
-      div.appendChild(btn);
-      requestList.appendChild(div);
-    });
-  }
-
-  async function sendFriendRequest(target) {
-    const snapshot = await get(ref(db, `users/${target}/requests`));
-    const requests = snapshot.val() || [];
-    if (!requests.includes(currentUser)) {
-      requests.push(currentUser);
-      await set(ref(db, `users/${target}/requests`), requests);
-      alert("Friend request sent to " + target);
-      loadFriends();
+      btn.className = "btn btn-outline-primary friend-btn";
+      btn.textContent = "Add " + u;
+      btn.onclick = () => sendFriendRequest(u);
+      allUsersList.appendChild(btn);
     }
-  }
-
-  async function acceptRequest(sender) {
-    const meRef = ref(db, `users/${currentUser}`);
-    const senderRef = ref(db, `users/${sender}`);
-    const meSnap = await get(meRef);
-    const senderSnap = await get(senderRef);
-    const meData = meSnap.val();
-    const senderData = senderSnap.val();
-
-    // Update friends
-    meData.friends.push(sender);
-    senderData.friends.push(currentUser);
-
-    // Remove request
-    meData.requests = meData.requests.filter(r => r !== sender);
-
-    await set(meRef, meData);
-    await set(senderRef, senderData);
-
-    alert("You are now friends with " + sender);
-    loadFriends();
-    loadRequests();
-  }
-
-  // Open private chat
-  function openChat(friend) {
-    activeChatUser = friend;
-    chatWith.textContent = "Chatting with: " + friend;
-    loadChat();
-  }
-
-  function loadChat() {
-    if (!activeChatUser) return;
-    const key = chatKey(currentUser, activeChatUser);
-    const chatRef = ref(db, "messages/" + key);
-
-    onValue(chatRef, snapshot => {
-      chatContainer.innerHTML = "";
-      const messages = snapshot.val() || {};
-      Object.values(messages).forEach(msg => {
-        const div = document.createElement("div");
-        div.className = "message " + (msg.sender === currentUser ? "receiver" : "sender");
-        div.innerHTML = `<b>${msg.sender}:</b> ${msg.text}`;
-        chatContainer.appendChild(div);
-      });
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    });
-  }
-
-  // Send chat message
-  sendBtn.addEventListener("click", async () => {
-    if (!activeChatUser) return alert("Select a friend to chat");
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    const key = chatKey(currentUser, activeChatUser);
-    await push(ref(db, "messages/" + key), { sender: currentUser, text: text, timestamp: Date.now() });
-    messageInput.value = "";
   });
+}
 
+// Load friend requests
+async function loadRequests() {
+  requestList.innerHTML = "";
+  const snapshot = await get(ref(db, `users/${currentUser}/requests`));
+  const requests = snapshot.val() || [];
+
+  requests.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "d-flex justify-content-between align-items-center mb-1";
+    div.innerHTML = `<span>${r} sent request</span>`;
+    const btn = document.createElement("button");
+    btn.className = "btn btn-success btn-sm";
+    btn.textContent = "Accept";
+    btn.onclick = () => acceptRequest(r);
+    div.appendChild(btn);
+    requestList.appendChild(div);
+  });
+}
+
+// Send friend request
+async function sendFriendRequest(target) {
+  const snapshot = await get(ref(db, `users/${target}/requests`));
+  const requests = snapshot.val() || [];
+  if (!requests.includes(currentUser)) {
+    requests.push(currentUser);
+    await set(ref(db, `users/${target}/requests`), requests);
+    alert("Friend request sent to " + target);
+    loadFriends();
+  }
+}
+
+// Accept request
+async function acceptRequest(sender) {
+  const meRef = ref(db, `users/${currentUser}`);
+  const senderRef = ref(db, `users/${sender}`);
+  const meSnap = await get(meRef);
+  const senderSnap = await get(senderRef);
+  const meData = meSnap.val();
+  const senderData = senderSnap.val();
+
+  meData.friends.push(sender);
+  senderData.friends.push(currentUser);
+  meData.requests = meData.requests.filter(r => r !== sender);
+
+  await set(meRef, meData);
+  await set(senderRef, senderData);
+
+  alert("You are now friends with " + sender);
+  loadFriends();
+  loadRequests();
+}
+
+// Open chat
+function openChat(friend) {
+  activeChatUser = friend;
+  chatWith.textContent = "Chatting with: " + friend;
+  loadChat();
+}
+
+// Load chat
+function loadChat() {
+  if (!activeChatUser) return;
+  const key = chatKey(currentUser, activeChatUser);
+  const chatRef = ref(db, "messages/" + key);
+
+  onValue(chatRef, snapshot => {
+    chatContainer.innerHTML = "";
+    const messages = snapshot.val() || {};
+    Object.values(messages).forEach(msg => {
+      const div = document.createElement("div");
+      div.className = "message " + (msg.sender === currentUser ? "receiver" : "sender");
+      div.innerHTML = `<b>${msg.sender}:</b> ${msg.text}`;
+      chatContainer.appendChild(div);
+    });
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  });
+}
+
+// Send message
+sendBtn.addEventListener("click", async () => {
+  if (!activeChatUser) return alert("Select a friend to chat");
+  const text = messageInput.value.trim();
+  if (!text) return;
+
+  const key = chatKey(currentUser, activeChatUser);
+  await push(ref(db, "messages/" + key), { sender: currentUser, text: text, timestamp: Date.now() });
+  messageInput.value = "";
+});
+
+// Search users
+searchUserInput.addEventListener("input", async () => {
+  const query = searchUserInput.value.trim().toLowerCase();
+  allUsersList.innerHTML = "";
+
+  const snapshot = await get(ref(db, "users"));
+  const users = snapshot.val() || {};
+  const me = users[currentUser];
+
+  Object.keys(users).forEach(u => {
+    if (u !== currentUser && !me.friends.includes(u) && !(me.requests || []).includes(u) && u.toLowerCase().includes(query)) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-outline-primary friend-btn";
+      btn.textContent = "Add " + u;
+      btn.onclick = () => sendFriendRequest(u);
+      allUsersList.appendChild(btn);
+    }
+  });
+});
 </script>
 </body>
 </html>
