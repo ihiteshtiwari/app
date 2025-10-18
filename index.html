@@ -12,7 +12,7 @@
   .message { margin: 5px 0; padding: 6px 10px; border-radius: 10px; word-wrap: break-word; }
   .sender { background-color: #a5f3fc; align-self: flex-start; }
   .receiver { background-color: #fbcfe8; align-self: flex-end; }
-  .friend-btn { margin-bottom: 5px; }
+  .friend-btn { margin-bottom: 5px; text-align: left; }
 </style>
 </head>
 <body>
@@ -92,6 +92,7 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
+// DOM Elements
 const signupBox = document.getElementById("signupBox");
 const loginBox = document.getElementById("loginBox");
 const chatBox = document.getElementById("chatBox");
@@ -130,7 +131,8 @@ signupBtn.addEventListener("click", async () => {
 
   await set(ref(db, `users/${id}`), { password: pass, friends: [], requests: [] });
   alert("Account created!");
-  signupBox.classList.add("d-none"); loginBox.classList.remove("d-none");
+  signupBox.classList.add("d-none");
+  loginBox.classList.remove("d-none");
 });
 
 // Login
@@ -144,16 +146,18 @@ loginBtn.addEventListener("click", async () => {
 
   currentUser = id;
   currentUserLabel.textContent = "Logged in as: " + currentUser;
-  loginBox.classList.add("d-none"); chatBox.classList.remove("d-none");
+  loginBox.classList.add("d-none");
+  chatBox.classList.remove("d-none");
 
-  loadFriends();
+  loadUsers();
   loadRequests();
 });
 
 // Logout
 logoutBtn.addEventListener("click", () => {
   currentUser = null; activeChatUser = null;
-  chatBox.classList.add("d-none"); loginBox.classList.remove("d-none");
+  chatBox.classList.add("d-none");
+  loginBox.classList.remove("d-none");
   chatContainer.innerHTML = "";
 });
 
@@ -161,52 +165,62 @@ logoutBtn.addEventListener("click", () => {
 goToLogin.addEventListener("click", () => { signupBox.classList.add("d-none"); loginBox.classList.remove("d-none"); });
 goToSignup.addEventListener("click", () => { loginBox.classList.add("d-none"); signupBox.classList.remove("d-none"); });
 
-// Load Friends and Users
-async function loadFriends() {
-  friendList.innerHTML = "";
-  allUsersList.innerHTML = "";
+// Load users and friends
+function loadUsers() {
+  const usersRef = ref(db, "users");
+  onValue(usersRef, snapshot => {
+    const users = snapshot.val() || {};
+    const me = users[currentUser];
+    if (!me) return;
 
-  const snapshot = await get(ref(db, "users"));
-  const users = snapshot.val() || {};
-  const me = users[currentUser];
+    const friendsArr = me.friends || [];
+    const requestsArr = me.requests || [];
 
-  // Friends
-  me.friends.forEach(f => {
-    const btn = document.createElement("button");
-    btn.className = "btn btn-outline-success friend-btn";
-    btn.textContent = f;
-    btn.onclick = () => openChat(f);
-    friendList.appendChild(btn);
-  });
-
-  // Other users to send request
-  Object.keys(users).forEach(u => {
-    if (u !== currentUser && !me.friends.includes(u) && !(me.requests || []).includes(u)) {
+    // Friends list
+    friendList.innerHTML = "";
+    friendsArr.forEach(f => {
       const btn = document.createElement("button");
-      btn.className = "btn btn-outline-primary friend-btn";
-      btn.textContent = "Add " + u;
-      btn.onclick = () => sendFriendRequest(u);
-      allUsersList.appendChild(btn);
-    }
+      btn.className = "btn btn-outline-success friend-btn";
+      btn.textContent = f;
+      btn.onclick = () => openChat(f);
+      friendList.appendChild(btn);
+    });
+
+    // All users list
+    allUsersList.innerHTML = "";
+    Object.keys(users).forEach(u => {
+      if (
+        u !== currentUser &&
+        !friendsArr.includes(u) &&
+        !requestsArr.includes(u)
+      ) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-outline-primary friend-btn";
+        btn.textContent = "Add " + u;
+        btn.onclick = () => sendFriendRequest(u);
+        allUsersList.appendChild(btn);
+      }
+    });
   });
 }
 
 // Load friend requests
-async function loadRequests() {
-  requestList.innerHTML = "";
-  const snapshot = await get(ref(db, `users/${currentUser}/requests`));
-  const requests = snapshot.val() || [];
-
-  requests.forEach(r => {
-    const div = document.createElement("div");
-    div.className = "d-flex justify-content-between align-items-center mb-1";
-    div.innerHTML = `<span>${r} sent request</span>`;
-    const btn = document.createElement("button");
-    btn.className = "btn btn-success btn-sm";
-    btn.textContent = "Accept";
-    btn.onclick = () => acceptRequest(r);
-    div.appendChild(btn);
-    requestList.appendChild(div);
+function loadRequests() {
+  const requestsRef = ref(db, `users/${currentUser}/requests`);
+  onValue(requestsRef, snapshot => {
+    const requests = snapshot.val() || [];
+    requestList.innerHTML = "";
+    requests.forEach(sender => {
+      const div = document.createElement("div");
+      div.className = "d-flex justify-content-between align-items-center mb-1";
+      div.innerHTML = `<span>${sender} sent request</span>`;
+      const btn = document.createElement("button");
+      btn.className = "btn btn-success btn-sm";
+      btn.textContent = "Accept";
+      btn.onclick = () => acceptRequest(sender);
+      div.appendChild(btn);
+      requestList.appendChild(div);
+    });
   });
 }
 
@@ -218,11 +232,11 @@ async function sendFriendRequest(target) {
     requests.push(currentUser);
     await set(ref(db, `users/${target}/requests`), requests);
     alert("Friend request sent to " + target);
-    loadFriends();
+    loadUsers();
   }
 }
 
-// Accept request
+// Accept friend request
 async function acceptRequest(sender) {
   const meRef = ref(db, `users/${currentUser}`);
   const senderRef = ref(db, `users/${sender}`);
@@ -230,6 +244,10 @@ async function acceptRequest(sender) {
   const senderSnap = await get(senderRef);
   const meData = meSnap.val();
   const senderData = senderSnap.val();
+
+  meData.friends = meData.friends || [];
+  senderData.friends = senderData.friends || [];
+  meData.requests = meData.requests || [];
 
   meData.friends.push(sender);
   senderData.friends.push(currentUser);
@@ -239,7 +257,7 @@ async function acceptRequest(sender) {
   await set(senderRef, senderData);
 
   alert("You are now friends with " + sender);
-  loadFriends();
+  loadUsers();
   loadRequests();
 }
 
@@ -283,14 +301,22 @@ sendBtn.addEventListener("click", async () => {
 // Search users
 searchUserInput.addEventListener("input", async () => {
   const query = searchUserInput.value.trim().toLowerCase();
-  allUsersList.innerHTML = "";
-
   const snapshot = await get(ref(db, "users"));
   const users = snapshot.val() || {};
   const me = users[currentUser];
+  if (!me) return;
 
+  const friendsArr = me.friends || [];
+  const requestsArr = me.requests || [];
+
+  allUsersList.innerHTML = "";
   Object.keys(users).forEach(u => {
-    if (u !== currentUser && !me.friends.includes(u) && !(me.requests || []).includes(u) && u.toLowerCase().includes(query)) {
+    if (
+      u !== currentUser &&
+      !friendsArr.includes(u) &&
+      !requestsArr.includes(u) &&
+      u.toLowerCase().includes(query)
+    ) {
       const btn = document.createElement("button");
       btn.className = "btn btn-outline-primary friend-btn";
       btn.textContent = "Add " + u;
