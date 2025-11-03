@@ -1,492 +1,820 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Firebase Chat — Polished Single File (v9)</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-  :root{--bg:#f2fbff;--panel:#fff;--muted:#6b7280;--accent1:#06b6d4;--accent2:#f472b6}
-  body{background:var(--bg);font-family:Inter,system-ui,Arial;margin:0;color:#0f172a}
-  .app{max-width:1100px;margin:22px auto;padding:16px}
-  .card-panel{border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.06);overflow:hidden}
-  .left-panel,.right-panel{background:var(--panel);padding:14px}
-  #chatContainer{height:380px;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(#fff,#fbfdff);border-radius:8px}
-  .message{max-width:78%;padding:8px 12px;border-radius:14px;box-shadow:0 2px 6px rgba(2,6,23,0.04);transform:translateY(6px);opacity:0;animation:msgIn .18s ease forwards}
-  .sender{align-self:flex-start;background:#e6fffb}
-  .receiver{align-self:flex-end;background:#fff0f6}
-  @keyframes msgIn{to{transform:none;opacity:1}}
-  .friend-btn{margin-bottom:8px;text-align:left;border-radius:10px}
-  .avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
-  .accent{background:linear-gradient(135deg,var(--accent1),#0891b2)}
-  .pink{background:linear-gradient(135deg,var(--accent2),#fb7185)}
-  .small-muted{font-size:13px;color:var(--muted)}
-  .flex-gap{display:flex;gap:8px;align-items:center}
-  .loading-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.6;margin-left:6px;animation:blink 1s infinite;}
-  @keyframes blink{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
-  @media (max-width:840px){.grid{display:block}.left-col{margin-bottom:12px}}
-  .collapse-btn{display:none}
-  @media (max-width:840px){.collapse-btn{display:inline-block}}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AquaChat — AQC (single file)</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --a1:#00c7d9; --a2:#1e90ff; --bg:#e8fbff; --muted:#58707a;
+    }
+    body{background:var(--bg);font-family:Inter,system-ui,Arial,sans-serif;margin:20px}
+    .app{max-width:1100px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 18px 40px rgba(2,6,23,0.08);overflow:hidden;min-height:78vh}
+    .app-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff}
+    .brand{display:flex;align-items:center;gap:12px}
+    .aqc-logo{width:48px;height:48px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#fff;background:linear-gradient(135deg,#00e7ff,#2da8ff);box-shadow:0 6px 18px rgba(16,24,40,0.12);animation:float 3s ease-in-out infinite}
+    @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    .aqc-wave{width:8px;height:8px;background:rgba(255,255,255,.85);border-radius:50%;margin-left:6px;animation:blink 1.1s infinite}
+    @keyframes blink{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
+
+    .app-body{display:flex;min-height:64vh}
+    .left{width:36%;border-right:1px solid #e6f7fb;padding:14px;overflow:auto;background:linear-gradient(180deg,#f8ffff,#ffffff)}
+    .right{flex:1;display:flex;flex-direction:column;min-width:0;background:#fff}
+
+    .card-auth{border-radius:10px}
+    .user-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:10px;background:#fff;border:1px solid #eef9fb;margin-bottom:8px}
+    .user-left{display:flex;align-items:center;gap:12px}
+    .avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;background:linear-gradient(135deg,var(--a2),var(--a1));box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+    .small-muted{color:var(--muted);font-size:13px}
+
+    .chat-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef9fb;background:linear-gradient(90deg,#f4ffff,#f8ffff)}
+    #chatContainer{flex:1;overflow:auto;padding:16px;background:linear-gradient(#fff,#fbfeff);display:flex;flex-direction:column;gap:10px;min-height:200px}
+    .msg{max-width:72%;padding:10px 12px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06);word-wrap:break-word;position:relative}
+    .msg.me{margin-left:auto;background:linear-gradient(135deg,#bbdefb,#9fd3ff)}
+    .msg.them{margin-right:auto;background:linear-gradient(135deg,#e0f7fa,#c6f0f0)}
+    .msg-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:6px}
+    .ticks{font-size:13px;color:rgba(0,0,0,0.45)}
+    .ticks.read{color:#06b6d4}
+
+    .input-row{display:flex;gap:10px;padding:12px;border-top:1px solid #eef9fb;background:linear-gradient(90deg,#fbfeff,#ffffff);align-items:center}
+    .input-row .form-control{border-radius:10px}
+
+    .btn-back{display:none}
+    @media(max-width:992px){
+      .left{width:100%}
+      .right{position:absolute;inset:72px 12px 12px 12px;display:none;border-radius:12px;box-shadow:0 20px 40px rgba(2,6,23,0.12);background:#fff;z-index:50}
+      .right.open{display:flex}
+      .btn-back{display:inline-block;margin-right:8px}
+    }
+
+    .loader-overlay{position:fixed;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.78);z-index:3000}
+    .d-none-important{display:none !important}
+
+    .fade-input{transition:opacity .18s ease}
+  </style>
 </head>
 <body>
-<div class="app container">
-  <div class="card-panel">
-    <div class="d-flex align-items-center justify-content-between p-3" style="border-bottom:1px solid #eef2f7;">
-      <div class="d-flex align-items-center gap-3">
-        <h4 class="m-0">Firebase Chat</h4>
-        <span id="statusDot" class="loading-dot" title="Realtime"></span>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <button id="toggleSidebar" class="btn btn-sm btn-outline-secondary collapse-btn">Toggle</button>
-        <span id="currentUserLabel" class="small-muted"></span>
-        <button id="logoutBtn" class="btn btn-danger btn-sm d-none">Logout</button>
+
+<div class="app">
+  <div class="app-header">
+    <div class="brand">
+      <div class="aqc-logo">AQC <span class="aqc-wave"></span></div>
+      <div>
+        <div style="font-weight:900">AquaChat</div>
+        <div class="small-muted" style="font-size:12px">Calm. Private. Realtime.</div>
       </div>
     </div>
 
-    <div class="row gx-3 grid">
-      <!-- LEFT -->
-      <div class="col-lg-4 left-col">
-        <div class="left-panel d-flex flex-column gap-3">
-          <!-- Signup -->
-          <div id="signupBox">
-            <h6>Create account</h6>
-            <input id="signupName" class="form-control mb-2" placeholder="Display name">
-            <input id="signupEmail" class="form-control mb-2" placeholder="Email">
-            <input id="signupPass" type="password" class="form-control mb-2" placeholder="Password (6+ chars)">
-            <div class="d-flex gap-2">
-              <button id="signupBtn" class="btn btn-primary w-50">Sign up</button>
-              <button id="showLogin" class="btn btn-link w-50">Have account?</button>
-            </div>
-          </div>
+    <div class="d-flex align-items-center gap-2">
+      <div id="userLabel" class="small-muted" style="color:rgba(255,255,255,0.95)"></div>
+      <button id="btnReload" style="display: none;"></button>
+      <button id="logoutBtn" class="btn btn-sm btn-outline-light d-none">Logout</button>
+    </div>
+  </div>
 
-          <!-- Login -->
-          <div id="loginBox" class="d-none">
-            <h6>Login</h6>
-            <input id="loginEmail" class="form-control mb-2" placeholder="Email">
-            <input id="loginPass" type="password" class="form-control mb-2" placeholder="Password">
-            <div class="d-flex gap-2">
-              <button id="loginBtn" class="btn btn-success w-50">Login</button>
-              <button id="showSignup" class="btn btn-link w-50">Create</button>
-            </div>
-          </div>
-
-          <!-- Logged area -->
-          <div id="loggedArea" class="d-none d-flex flex-column gap-2">
-            <input id="searchInput" class="form-control" placeholder="Search users by name or email (debounced)">
-            <div>
-              <h6 class="mb-1">Friends</h6>
-              <div id="friendList" class="d-flex flex-column"></div>
-              <div id="noFriends" class="small-muted d-none">No friends yet — add someone</div>
-            </div>
-
-            <div>
-              <h6 class="mb-1">All users</h6>
-              <div id="allUsersList" class="d-flex flex-column"></div>
-              <div id="noUsers" class="small-muted d-none">No users found</div>
-            </div>
-
-            <div>
-              <h6 class="mb-1">Requests</h6>
-              <div id="requestList" class="d-flex flex-column"></div>
-              <div id="noRequests" class="small-muted d-none">No pending requests</div>
-            </div>
+  <div class="app-body">
+    <!-- LEFT -->
+    <div class="left">
+      <div class="card card-auth mb-3">
+        <div class="card-body" style="display: none;">
+          <h6 class="card-title mb-2">Welcome</h6>
+          <div class="small-muted mb-2">Sign in to show your presence and chat</div>
+          <div class="d-grid gap-2">
+            <button id="openAuthBtn" class="btn btn-primary btn-sm">Login / Sign up</button>
+            <button id="openAuthBtn2" class="btn btn-outline-primary btn-sm">Open Login Modal</button>
           </div>
         </div>
       </div>
 
-      <!-- RIGHT -->
-      <div class="col-lg-8">
-        <div class="right-panel d-flex flex-column gap-2">
-          <div class="d-flex align-items-center">
-            <div id="chatWith" class="fw-semibold small-muted">Select a friend to chat</div>
-            <div id="chatMeta" class="ms-auto small-muted"></div>
-          </div>
-
-          <div id="chatContainer"></div>
-
-          <div class="input-group">
-            <input id="messageInput" class="form-control" placeholder="Type message and press Enter">
-            <button id="sendBtn" class="btn btn-primary">Send</button>
+      <div class="accordion" id="leftAccordion">
+        <div class="accordion-item mb-2">
+          <h2 class="accordion-header" id="headingFriends">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFriends">Friends</button>
+          </h2>
+          <div id="collapseFriends" class="accordion-collapse collapse show" data-bs-parent="#leftAccordion">
+            <div class="accordion-body">
+              <div id="friendsList"></div>
+              <div id="noFriends" class="small-muted" style="display:none">No friends yet</div>
+            </div>
           </div>
         </div>
+
+        <div class="accordion-item mb-2">
+          <h2 class="accordion-header" id="headingReq">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReq">Friend Requests</button>
+          </h2>
+          <div id="collapseReq" class="accordion-collapse collapse" data-bs-parent="#leftAccordion">
+            <div class="accordion-body">
+              <div><strong>Incoming</strong></div>
+              <div id="incomingList"></div>
+              <div id="noIncoming" class="small-muted" style="display:none">No incoming requests</div>
+              <hr />
+              <div><strong>Outgoing</strong></div>
+              <div id="outgoingList"></div>
+              <div id="noOutgoing" class="small-muted" style="display:none">No outgoing requests</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item mb-2">
+          <h2 class="accordion-header" id="headingAll">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAll">All Users</button>
+          </h2>
+          <div id="collapseAll" class="accordion-collapse collapse" data-bs-parent="#leftAccordion">
+            <div class="accordion-body">
+              <input id="searchAll" class="form-control form-control-sm mb-2" placeholder="Search users..." />
+              <div id="allUsersList"></div>
+              <div id="noUsers" class="small-muted" style="display:none">No users</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right" id="rightPane">
+      <div class="chat-header">
+        <div>
+          <button id="btnBack" class="btn btn-sm btn-outline-primary btn-back">← Back</button>
+          <strong id="chatWith">Select friend</strong>
+          <span id="chatMeta" class="small-muted ms-2"></span>
+        </div>
+        <div>
+          <button id="btnRemoveFriend" class="btn btn-sm btn-danger d-none">Remove</button>
+        </div>
+      </div>
+
+      <div id="chatContainer"><div class="small-muted p-3">Select a friend to open chat</div></div>
+
+      <div class="input-row">
+        <input id="inpMsg" class="form-control form-control-sm" placeholder="Type a message..." />
+        <button id="btnSend" class="btn btn-primary btn-sm">Send</button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Loader -->
+<div id="loaderOverlay" class="loader-overlay d-none-important">
+  <div class="text-center">
+    <div class="aqc-logo mb-2" style="width:96px;height:96px;font-size:22px">AQC</div>
+    <div class="small-muted">Loading…</div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">AquaChat — Login / Sign up</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex gap-2 mb-3">
+          <button id="modeLoginBtn" class="btn btn-sm btn-outline-primary flex-fill">Login</button>
+          <button id="modeSignupBtn" class="btn btn-sm btn-primary flex-fill">Sign up</button>
+        </div>
+
+        <div id="authAlert" class="alert d-none" role="alert"></div>
+
+        <div id="signupNameWrap" class="mb-2 fade-input d-none">
+          <input id="modalName" class="form-control form-control-sm" placeholder="Display name (for sign up)" />
+        </div>
+
+        <div class="mb-2">
+          <input id="modalEmail" class="form-control form-control-sm" placeholder="Email" />
+        </div>
+        <div class="mb-2">
+          <input id="modalPass" type="password" class="form-control form-control-sm" placeholder="Password (6+ chars)" />
+        </div>
+
+        <div class="d-flex gap-2">
+          <button id="modalActionBtn" class="btn btn-primary flex-fill">Login</button>
+          <button id="modalCloseBtn" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal">Close</button>
+        </div>
+
+        <div class="small-muted mt-2">You will appear online while signed in.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase + App logic -->
 <script type="module">
-/* eslint-disable no-console */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, get, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getDatabase, ref, set, get, onValue, push, update, remove, runTransaction, onDisconnect } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* ------------------ CONFIG (use your project config) ------------------ */
-const firebaseConfig = {
-  apiKey: "AIzaSyDwiJVuByaincxun8h-uNgVQ0wwEiig3I8",
-  authDomain: "chatapp-11789.firebaseapp.com",
-  databaseURL: "https://chatapp-11789-default-rtdb.firebaseio.com",
-  projectId: "chatapp-11789",
-  storageBucket: "chatapp-11789.firebasestorage.app",
-  messagingSenderId: "82260267373",
-  appId: "1:82260267373:web:f5e51e1ecb95ba98b74a64",
-  measurementId: "G-SCSHS5X2XS"
-};
+  // ---------- your firebase config ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDwiJVuByaincxun8h-uNgVQ0wwEiig3I8",
+    authDomain: "chatapp-11789.firebaseapp.com",
+    databaseURL: "https://chatapp-11789-default-rtdb.firebaseio.com",
+    projectId: "chatapp-11789",
+    storageBucket: "chatapp-11789.firebasestorage.app",
+    messagingSenderId: "82260267373",
+    appId: "1:82260267373:web:f5e51e1ecb95ba98b74a64",
+    measurementId: "G-SCSHS5X2XS"
+  };
 
-/* ------------------ INIT ------------------ */
-const app = initializeApp(firebaseConfig);
-try { getAnalytics(app); } catch(e) { /* ignore if analytics blocked */ }
-const db = getDatabase(app);
-const auth = getAuth(app);
+  // ---------- init ----------
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-/* ------------------ DOM ------------------ */
-const signupBox = document.getElementById('signupBox');
-const signupName = document.getElementById('signupName');
-const signupEmail = document.getElementById('signupEmail');
-const signupPass = document.getElementById('signupPass');
-const signupBtn = document.getElementById('signupBtn');
-const showLogin = document.getElementById('showLogin');
+  // ---------- DOM refs ----------
+  const openAuthBtn = document.getElementById('openAuthBtn');
+  const openAuthBtn2 = document.getElementById('openAuthBtn2');
+  const loaderOverlay = document.getElementById('loaderOverlay');
+  const userLabel = document.getElementById('userLabel');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const btnReload = document.getElementById('btnReload');
 
-const loginBox = document.getElementById('loginBox');
-const loginEmail = document.getElementById('loginEmail');
-const loginPass = document.getElementById('loginPass');
-const loginBtn = document.getElementById('loginBtn');
-const showSignup = document.getElementById('showSignup');
+  const friendsList = document.getElementById('friendsList');
+  const incomingList = document.getElementById('incomingList');
+  const outgoingList = document.getElementById('outgoingList');
+  const allUsersList = document.getElementById('allUsersList');
 
-const loggedArea = document.getElementById('loggedArea');
-const logoutBtn = document.getElementById('logoutBtn');
-const currentUserLabel = document.getElementById('currentUserLabel');
-const toggleSidebar = document.getElementById('toggleSidebar');
+  const noFriends = document.getElementById('noFriends');
+  const noIncoming = document.getElementById('noIncoming');
+  const noOutgoing = document.getElementById('noOutgoing');
+  const noUsers = document.getElementById('noUsers');
 
-const searchInput = document.getElementById('searchInput');
-const friendList = document.getElementById('friendList');
-const allUsersList = document.getElementById('allUsersList');
-const requestList = document.getElementById('requestList');
-const noUsers = document.getElementById('noUsers');
-const noFriends = document.getElementById('noFriends');
-const noRequests = document.getElementById('noRequests');
+  const searchAll = document.getElementById('searchAll');
+  const chatWith = document.getElementById('chatWith');
+  const chatMeta = document.getElementById('chatMeta');
+  const chatContainer = document.getElementById('chatContainer');
+  const inpMsg = document.getElementById('inpMsg');
+  const btnSend = document.getElementById('btnSend');
+  const btnBack = document.getElementById('btnBack');
+  const btnRemoveFriend = document.getElementById('btnRemoveFriend');
 
-const chatWith = document.getElementById('chatWith');
-const chatContainer = document.getElementById('chatContainer');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const statusDot = document.getElementById('statusDot');
-const chatMeta = document.getElementById('chatMeta');
+  const authModalEl = document.getElementById('authModal');
+  const modalNameWrap = document.getElementById('signupNameWrap');
+  const modalName = document.getElementById('modalName');
+  const modalEmail = document.getElementById('modalEmail');
+  const modalPass = document.getElementById('modalPass');
+  const modeLoginBtn = document.getElementById('modeLoginBtn');
+  const modeSignupBtn = document.getElementById('modeSignupBtn');
+  const modalActionBtn = document.getElementById('modalActionBtn');
+  const authAlert = document.getElementById('authAlert');
 
-/* ------------------ STATE ------------------ */
-let currentUser = null;
-let currentUid = null;
-let activeChatUid = null;
-let usersCache = {};
-let searchTimer = null;
+  let authModal = null;
 
-/* ------------------ HELPERS ------------------ */
-const chatKey = (a,b) => [a,b].sort().join('_');
-const avatarText = name => (name||'U').slice(0,2).toUpperCase();
-const avatarEl = (name, cls='accent') => { const d=document.createElement('div'); d.className=`avatar ${cls}`; d.textContent = avatarText(name); return d; };
-const fmtTime = ts => { try { return new Date(Number(ts)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(e){ return ''; } };
-const ensureArray = a => Array.isArray(a) ? a : (a && typeof a === 'object' ? Object.values(a) : []);
-const escapeHtml = s => s ? String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') : '';
+  // ---------- state ----------
+  let currentUser = null;
+  let usersCache = {};
+  let statuses = {};
+  let activeFriend = null;
+  let usersUnsub = null;
+  let statusUnsub = null;
+  let messagesUnsub = null;
+  let authMode = 'login'; // 'login' | 'signup'
 
-async function safeGet(path){ const s = await get(ref(db, path)); return s.exists() ? s.val() : null; }
+  // ---------- helpers ----------
+  const showLoader = on => loaderOverlay.classList.toggle('d-none-important', !on);
+  const escapeHtml = s => String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const avatar = txt => { const d = document.createElement('div'); d.className='avatar'; d.textContent = String(txt||'U').charAt(0).toUpperCase(); return d; };
+  const fmtTime = ts => new Date(Number(ts)).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 
-/* ------------------ UI behaviour ------------------ */
-showLogin.onclick = () => { signupBox.classList.add('d-none'); loginBox.classList.remove('d-none'); };
-showSignup.onclick = () => { loginBox.classList.add('d-none'); signupBox.classList.remove('d-none'); };
-toggleSidebar.onclick = () => { document.querySelector('.left-col').classList.toggle('d-none'); };
-
-signupBtn.onclick = async () => {
-  const name = signupName.value.trim();
-  const email = signupEmail.value.trim();
-  const pass = signupPass.value;
-  if(!name || !email || !pass) return alert('Fill name, email and password');
-  if(pass.length < 6) return alert('Password must be 6+ chars');
-
-  try{
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(cred.user, { displayName: name });
-    const uid = cred.user.uid;
-    // create DB node safely
-    const node = { uid, email: cred.user.email || '', displayName: name, friends: [], requests: [] };
-    await set(ref(db, `users/${uid}`), node);
-    signupName.value=''; signupEmail.value=''; signupPass.value='';
-    console.log('Signup created', uid);
-  } catch(err){
-    console.error('Signup error', err);
-    alert(err.message || 'Signup failed');
-  }
-};
-
-loginBtn.onclick = async () => {
-  const email = loginEmail.value.trim();
-  const pass = loginPass.value;
-  if(!email || !pass) return alert('Fill email and password');
-  try{
-    await signInWithEmailAndPassword(auth, email, pass);
-    loginEmail.value=''; loginPass.value='';
-  } catch(err){
-    console.error('Login error', err);
-    alert(err.message || 'Login failed');
-  }
-};
-
-logoutBtn.onclick = async () => {
-  try { await signOut(auth); } catch(e) { console.error('Logout err', e); }
-};
-
-/* ------------------ Auth state (persistent session) ------------------ */
-onAuthStateChanged(auth, async user => {
-  if(user){
-    currentUser = user;
-    currentUid = user.uid;
-    currentUserLabel.textContent = user.displayName ? `You: ${user.displayName}` : `You: ${user.email}`;
-    signupBox.classList.add('d-none'); loginBox.classList.add('d-none');
-    loggedArea.classList.remove('d-none'); logoutBtn.classList.remove('d-none');
-
-    // ensure DB node exists
-    const dbUser = await safeGet(`users/${currentUid}`);
-    if(!dbUser){
-      await set(ref(db, `users/${currentUid}`), { uid: currentUid, email: user.email || '', displayName: user.displayName || '', friends: [], requests: [] });
-    }
-
-    startUsersListener();
-    startRequestsListener();
-    renderLists();
-  } else {
-    currentUser = null; currentUid = null; activeChatUid = null; usersCache = {};
-    currentUserLabel.textContent = '';
-    signupBox.classList.remove('d-none'); loginBox.classList.remove('d-none');
-    loggedArea.classList.add('d-none'); logoutBtn.classList.add('d-none');
-    chatContainer.innerHTML = ''; friendList.innerHTML = ''; allUsersList.innerHTML = ''; requestList.innerHTML = '';
-  }
-});
-
-/* ------------------ Realtime listeners ------------------ */
-let usersListener = null;
-function startUsersListener(){
-  if(usersListener) return;
-  usersListener = onValue(ref(db, 'users'), snap => {
-    usersCache = snap.val() || {};
-    // normalize arrays
-    Object.values(usersCache).forEach(u => { if(!u.friends) u.friends = []; if(!u.requests) u.requests = []; });
-    renderLists();
-    if(activeChatUid) loadChat(activeChatUid);
-    statusDot.style.background = '#16a34a';
-    setTimeout(()=> statusDot.style.background = '', 800);
-  }, err => {
-    console.error('users onValue err', err);
-    statusDot.style.background = '#ef4444';
-  });
-}
-
-function startRequestsListener(){
-  if(!currentUid) return;
-  return onValue(ref(db, `users/${currentUid}/requests`), snap => {
-    const arr = ensureArray(snap.val());
-    renderRequests(arr);
-  }, err => {
-    console.error('requests onValue err', err);
-  });
-}
-
-/* ------------------ Render lists ------------------ */
-function renderLists(){
-  if(!currentUid) return;
-  const me = usersCache[currentUid] || { friends:[], requests:[] };
-  const friends = ensureArray(me.friends);
-
-  friendList.innerHTML = '';
-  if(friends.length === 0) noFriends.classList.remove('d-none'); else noFriends.classList.add('d-none');
-  friends.forEach(uid => {
-    const u = usersCache[uid] || {};
-    const display = u.displayName || u.email || uid;
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-outline-success friend-btn d-flex align-items-center justify-content-between';
-    btn.innerHTML = `<div class="flex-gap"><div class="avatar accent">${avatarText(display)}</div><div><div>${escapeHtml(display)}</div><div class="small-muted">${escapeHtml(u.email||uid)}</div></div></div><small class="small-muted">Chat</small>`;
-    btn.onclick = () => openChat(uid);
-    friendList.appendChild(btn);
-  });
-
-  // all users filtered by search
-  const q = (searchInput.value||'').trim().toLowerCase();
-  allUsersList.innerHTML = '';
-  const keys = Object.keys(usersCache).sort((a,b) => ((usersCache[a].displayName||'') + (usersCache[a].email||'')).localeCompare((usersCache[b].displayName||'') + (usersCache[b].email||'')));
-  const filtered = keys.filter(uid => uid !== currentUid && !friends.includes(uid) && (q === '' || ((usersCache[uid].displayName||'').toLowerCase().includes(q) || (usersCache[uid].email||'').toLowerCase().includes(q))));
-  if(filtered.length === 0) noUsers.classList.remove('d-none'); else noUsers.classList.add('d-none');
-  filtered.forEach(uid => {
-    const u = usersCache[uid] || {};
-    const left = document.createElement('div'); left.className = 'd-flex align-items-center gap-2';
-    left.appendChild(avatarEl(u.displayName || u.email || uid));
-    left.innerHTML += `<div><div>${escapeHtml(u.displayName || u.email || uid)}</div><div class="small-muted">${escapeHtml(u.email || uid)}</div></div>`;
-
-    const row = document.createElement('div'); row.className = 'd-flex align-items-center justify-content-between friend-btn';
-    row.appendChild(left);
-    const right = document.createElement('div');
-
-    const meRequests = ensureArray(me.requests);
-    const theyHaveMyReq = ensureArray(u.requests).includes(currentUid);
-    const theyRequestedMe = meRequests.includes(uid);
-
-    if(theyHaveMyReq){
-      const b = document.createElement('button'); b.className='btn btn-outline-secondary btn-sm'; b.textContent='Requested'; b.disabled=true; right.appendChild(b);
-    } else if(theyRequestedMe){
-      const b = document.createElement('button'); b.className='btn btn-outline-info btn-sm'; b.textContent='Requested you'; b.disabled=true; right.appendChild(b);
+  // ---------- modal UI ----------
+  function setAuthMode(mode){
+    authMode = mode === 'signup' ? 'signup' : 'login';
+    if(authMode === 'signup'){
+      modalNameWrap.classList.remove('d-none');
+      modeSignupBtn.classList.add('btn-primary'); modeSignupBtn.classList.remove('btn-outline-primary');
+      modeLoginBtn.classList.add('btn-outline-primary'); modeLoginBtn.classList.remove('btn-primary');
+      modalActionBtn.textContent = 'Sign up';
     } else {
-      const b = document.createElement('button'); b.className='btn btn-primary btn-sm'; b.textContent='Add'; b.onclick = () => sendRequest(uid); right.appendChild(b);
+      modalNameWrap.classList.add('d-none');
+      modeLoginBtn.classList.add('btn-primary'); modeLoginBtn.classList.remove('btn-outline-primary');
+      modeSignupBtn.classList.add('btn-outline-primary'); modeSignupBtn.classList.remove('btn-primary');
+      modalActionBtn.textContent = 'Login';
+    }
+    setTimeout(()=> {
+      if(authMode === 'signup') modalName.focus();
+      else modalEmail.focus();
+    }, 220);
+  }
+  modeLoginBtn.addEventListener('click', ()=> setAuthMode('login'));
+  modeSignupBtn.addEventListener('click', ()=> setAuthMode('signup'));
+
+  openAuthBtn.addEventListener('click', ()=> authModal && authModal.show());
+  openAuthBtn2.addEventListener('click', ()=> authModal && authModal.show());
+
+  // ---------- auth actions ----------
+  modalActionBtn.addEventListener('click', async () => {
+    const email = (modalEmail.value||'').trim();
+    const pass = modalPass.value;
+    if(authMode === 'signup'){
+      const name = (modalName.value||'').trim();
+      if(!name || !email || !pass){ showAuthAlert('Name, email & password required', 'warning'); return; }
+      if(pass.length < 6){ showAuthAlert('Password must be 6+ chars', 'warning'); return; }
+
+      // prevent duplicate email: check users DB; if exists, warn and abort
+      try {
+        await reloadUsers(); // ensures usersCache is latest
+        const existing = Object.values(usersCache || {}).find(u => (u.email||'').toLowerCase() === email.toLowerCase());
+        if(existing){
+          showAuthAlert('An account with this email already exists (database). If you signed up before, try login.', 'warning');
+          return;
+        }
+      } catch(e){ console.error(e); }
+
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await set(ref(db, `users/${cred.user.uid}`), { uid: cred.user.uid, email, displayName: name, friends: [], requests: [], createdAt: Date.now() });
+        await update(ref(db, `status/${cred.user.uid}`), { online: true, lastOnline: Date.now() });
+        showAuthAlert('Account created & signed in', 'success');
+        modalName.value = modalEmail.value = modalPass.value = '';
+        // cleanup duplicates in DB (keeps earliest created)
+        await cleanDuplicateUsers();
+      } catch(err){ showAuthAlert(err.message || 'Signup failed', 'danger'); console.error(err); }
+    } else {
+      if(!email || !pass){ showAuthAlert('Enter email & password', 'warning'); return; }
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        showAuthAlert('Logged in', 'success');
+        modalEmail.value = modalPass.value = '';
+      } catch(err){ showAuthAlert(err.message || 'Login failed', 'danger'); console.error(err); }
+    }
+  });
+
+  function showAuthAlert(msg, type='info'){
+    authAlert.className = `alert alert-${type}`;
+    authAlert.textContent = msg;
+    authAlert.classList.remove('d-none');
+    setTimeout(()=> authAlert.classList.add('d-none'), 3500);
+  }
+
+  [modalName, modalEmail, modalPass].forEach(el => { if(el) el.addEventListener('keydown', e => { if(e.key === 'Enter') modalActionBtn.click(); }); });
+
+  // ---------- auth state ----------
+  onAuthStateChanged(auth, async user => {
+    currentUser = user;
+    if(user){
+      userLabel.textContent = user.email;
+      logoutBtn.classList.remove('d-none');
+      if(authModal) authModal.hide();
+
+      // ensure users node exists
+      try {
+        const s = await get(ref(db, `users/${user.uid}`));
+        if(!s.exists()) await set(ref(db, `users/${user.uid}`), { uid:user.uid, email:user.email, displayName:'', friends:[], requests:[], createdAt: Date.now() });
+      } catch(e){ console.error(e); }
+
+      // presence: set online and configure onDisconnect
+      try {
+        await update(ref(db, `status/${user.uid}`), { online:true, lastOnline: Date.now() });
+        const d = onDisconnect(ref(db, `status/${user.uid}`));
+        d.set({ online:false, lastOnline: Date.now() }).catch(()=>{}); // best-effort
+      } catch(e){ console.error(e); }
+
+      // cleanup duplicates in DB (keeps oldest and keeps the current user)
+      await cleanDuplicateUsers();
+
+      // initial load & realtime
+      await reloadUsers();
+      startRealtimeUsers();
+      startRealtimeStatus();
+    } else {
+      userLabel.textContent = '';
+      logoutBtn.classList.add('d-none');
+      // show modal
+      if(authModal){ setAuthMode('login'); authModal.show(); }
+      // cleanup listeners
+      if(usersUnsub) usersUnsub();
+      if(statusUnsub) statusUnsub();
+      if(messagesUnsub) messagesUnsub();
+      usersCache = {}; statuses = {}; activeFriend = null;
+      friendsList.innerHTML = incomingList.innerHTML = outgoingList.innerHTML = allUsersList.innerHTML = '';
+      chatContainer.innerHTML = '<div class="small-muted p-3">Sign in to start</div>';
+      document.querySelector('.right').classList.remove('open');
+    }
+  });
+
+  // logout: set offline then sign out
+  logoutBtn.addEventListener('click', async () => {
+    if(!currentUser) return;
+    try { await update(ref(db, `status/${currentUser.uid}`), { online:false, lastOnline: Date.now() }); } catch(e){ console.error(e); }
+    try { await signOut(auth); } catch(e){ console.error(e); }
+  });
+
+  // presence beforeunload
+  window.addEventListener('beforeunload', async () => {
+    if(currentUser){
+      try { await update(ref(db, `status/${currentUser.uid}`), { online:false, lastOnline: Date.now() }); } catch(e) {}
+    }
+  });
+
+  // ---------- DUPLICATE CLEANUP (DB only) ----------
+  // Keeps the oldest user (by createdAt if present, else first encountered). Does not delete currently signed-in user's node.
+  async function cleanDuplicateUsers(){
+    try {
+      const snap = await get(ref(db, 'users'));
+      if(!snap.exists()) return;
+      const users = snap.val();
+      const byEmail = {};
+      const toDelete = [];
+
+      for(const uid of Object.keys(users)){
+        const u = users[uid];
+        const email = (u.email||'').toLowerCase();
+        if(!email) continue;
+        if(!byEmail[email]) byEmail[email] = { keep: uid, createdAt: u.createdAt || 0, uids: [uid] };
+        else byEmail[email].uids.push(uid);
+      }
+
+      for(const email in byEmail){
+        const group = byEmail[email];
+        if(group.uids.length <= 1) continue;
+        // choose keep: prefer currentUser if present, else choose smallest createdAt (oldest)
+        let keep = group.keep;
+        if(currentUser && group.uids.includes(currentUser.uid)) keep = currentUser.uid;
+        else {
+          let oldest = group.uids[0], oldestTime = users[oldest].createdAt || 0;
+          for(const uid of group.uids){
+            const t = users[uid].createdAt || 0;
+            if(t && (oldestTime === 0 || t < oldestTime)){ oldest = uid; oldestTime = t; }
+          }
+          keep = oldest;
+        }
+        for(const uid of group.uids){
+          if(uid === keep) continue;
+          // avoid deleting currentUser accidentally
+          if(currentUser && uid === currentUser.uid) continue;
+          toDelete.push(uid);
+        }
+      }
+
+      if(toDelete.length === 0) return;
+      console.log('Cleaning duplicate DB users:', toDelete);
+      // delete nodes and related status/messages (optional)
+      await Promise.all(toDelete.map(async uid => {
+        try {
+          await remove(ref(db, `users/${uid}`));
+          await remove(ref(db, `status/${uid}`));
+          // Optionally remove messages involving that uid (be careful), we skip here to avoid data loss
+        } catch(err){ console.error('delete user error', uid, err); }
+      }));
+    } catch(err){ console.error('cleanDuplicateUsers err', err); }
+  }
+
+  // ---------- USERS: reload + realtime ----------
+  async function reloadUsers(){
+    if(!currentUser) return;
+    showLoader(true);
+    try {
+      const snap = await get(ref(db, 'users'));
+      usersCache = snap.val() || {};
+      renderLists();
+    } catch(err){ console.error(err); }
+    showLoader(false);
+  }
+
+  function startRealtimeUsers(){
+    if(usersUnsub) usersUnsub();
+    usersUnsub = onValue(ref(db, 'users'), snap => {
+      usersCache = snap.val() || {};
+      renderLists();
+    }, err => console.error(err));
+  }
+
+  function startRealtimeStatus(){
+    if(statusUnsub) statusUnsub();
+    statusUnsub = onValue(ref(db, 'status'), snap => {
+      statuses = snap.val() || {};
+      renderLists();
+      if(activeFriend && statuses[activeFriend.id]) {
+        const st = statuses[activeFriend.id];
+        chatMeta.textContent = st.online ? 'Online' : (st.lastOnline ? 'Last seen ' + new Date(st.lastOnline).toLocaleString() : '');
+      }
+    }, err => console.error(err));
+  }
+
+  // ---------- RENDER LISTS ----------
+  function renderLists(){
+    if(!currentUser || !usersCache) return;
+    const me = usersCache[currentUser.uid] || { friends:[], requests:[] };
+    const myFriends = Array.isArray(me.friends) ? me.friends : Object.values(me.friends || []);
+    const myRequests = Array.isArray(me.requests) ? me.requests : Object.values(me.requests || []);
+
+    // outgoing: others whose requests include my uid
+    const outgoing = [];
+    for(const uid in usersCache){
+      if(uid === currentUser.uid) continue;
+      const u = usersCache[uid];
+      const theirReq = Array.isArray(u.requests) ? u.requests : Object.values(u.requests || []);
+      if(theirReq.includes(currentUser.uid)) outgoing.push(uid);
     }
 
-    row.appendChild(right);
-    allUsersList.appendChild(row);
-  });
-}
+    // FRIENDS
+    friendsList.innerHTML = '';
+    noFriends.style.display = myFriends.length === 0 ? 'block' : 'none';
+    myFriends.forEach(uid => {
+      const u = usersCache[uid]; if(!u) return;
+      const row = document.createElement('div'); row.className='user-row';
+      const left = document.createElement('div'); left.className='user-left';
+      left.appendChild(avatar(u.email));
+      left.innerHTML += `<div><div style="font-weight:700">${escapeHtml(u.displayName||u.email||uid)}</div><div class="small-muted">${escapeHtml(u.email||'')}</div></div>`;
+      row.appendChild(left);
 
-/* ------------------ Requests rendering & actions ------------------ */
-function renderRequests(arr){
-  requestList.innerHTML = '';
-  if(!arr || arr.length === 0) noRequests.classList.remove('d-none'); else noRequests.classList.add('d-none');
-  (arr || []).forEach(uid => {
-    const u = usersCache[uid] || {};
-    const left = document.createElement('div'); left.className='d-flex align-items-center gap-2';
-    left.appendChild(avatarEl(u.displayName || u.email || uid));
-    left.innerHTML += `<div><div>${escapeHtml(u.displayName || u.email || uid)}</div><div class="small-muted">sent request</div></div>`;
-    const row = document.createElement('div'); row.className='d-flex align-items-center justify-content-between friend-btn';
-    row.appendChild(left);
+      const right = document.createElement('div');
+      const dot = document.createElement('span'); dot.className='online-dot';
+      dot.style.display = 'inline-block'; dot.style.width = '10px'; dot.style.height = '10px'; dot.style.borderRadius = '50%';
+      dot.style.background = (statuses[uid] && statuses[uid].online) ? '#00e676' : '#ccc';
+      right.appendChild(dot);
 
-    const right = document.createElement('div');
-    const acc = document.createElement('button'); acc.className='btn btn-success btn-sm me-2'; acc.textContent='Accept';
-    acc.onclick = () => acceptRequest(uid);
-    const dec = document.createElement('button'); dec.className='btn btn-outline-danger btn-sm'; dec.textContent='Decline';
-    dec.onclick = () => declineRequest(uid);
-    right.appendChild(acc); right.appendChild(dec);
-    row.appendChild(right);
-    requestList.appendChild(row);
-  });
-}
+      const btnChat = document.createElement('button'); btnChat.className='btn btn-sm btn-primary ms-2'; btnChat.textContent='Chat';
+      btnChat.onclick = ()=> openChat(uid, u.email || u.displayName || uid);
+      right.appendChild(btnChat);
 
-/* ------------------ send request (simple write) ------------------ */
-async function sendRequest(targetUid){
-  if(!currentUid) return alert('Login required');
-  try{
-    const tRef = ref(db, `users/${targetUid}/requests`);
-    const snap = await get(tRef);
-    let arr = ensureArray(snap.val());
-    if(arr.includes(currentUid)) return alert('Already requested');
-    arr.push(currentUid);
-    await set(tRef, arr);
-  } catch(err){
-    console.error('sendRequest err', err);
-    alert('Failed to send request');
-  }
-}
-
-/* ------------------ accept request (transactional) ------------------ */
-async function acceptRequest(senderUid){
-  if(!currentUid) return alert('Login required');
-  try{
-    // add each other to friends list and remove request from current user's requests using transactions
-    const myPath = `users/${currentUid}`;
-    const senderPath = `users/${senderUid}`;
-
-    await runTransaction(ref(db, myPath), currentVal => {
-      if(!currentVal) return currentVal;
-      currentVal.friends = ensureArray(currentVal.friends);
-      currentVal.requests = ensureArray(currentVal.requests).filter(r => r !== senderUid);
-      if(!currentVal.friends.includes(senderUid)) currentVal.friends.push(senderUid);
-      return currentVal;
+      row.appendChild(right);
+      friendsList.appendChild(row);
     });
 
-    await runTransaction(ref(db, senderPath), currentVal => {
-      if(!currentVal) return currentVal;
-      currentVal.friends = ensureArray(currentVal.friends);
-      if(!currentVal.friends.includes(currentUid)) currentVal.friends.push(currentUid);
-      return currentVal;
+    // INCOMING
+    incomingList.innerHTML = '';
+    noIncoming.style.display = myRequests.length === 0 ? 'block' : 'none';
+    myRequests.forEach(uid => {
+      const u = usersCache[uid]; if(!u) return;
+      const row = document.createElement('div'); row.className='user-row';
+      const left = document.createElement('div'); left.className='user-left';
+      left.appendChild(avatar(u.email));
+      left.innerHTML += `<div><div style="font-weight:700">${escapeHtml(u.displayName||u.email||uid)}</div><div class="small-muted">${escapeHtml(u.email||'')}</div></div>`;
+      row.appendChild(left);
+
+      const right = document.createElement('div');
+      const acc = document.createElement('button'); acc.className='btn btn-sm btn-success me-1'; acc.textContent='Accept';
+      acc.onclick = ()=> acceptRequest(uid);
+      const dec = document.createElement('button'); dec.className='btn btn-sm btn-danger'; dec.textContent='Decline';
+      dec.onclick = ()=> declineRequest(uid);
+      right.appendChild(acc); right.appendChild(dec);
+      row.appendChild(right);
+      incomingList.appendChild(row);
     });
-  } catch(err){
-    console.error('acceptRequest err', err);
-    alert('Failed to accept request');
-  }
-}
 
-/* ------------------ decline request ------------------ */
-async function declineRequest(senderUid){
-  if(!currentUid) return alert('Login required');
-  try{
-    await runTransaction(ref(db, `users/${currentUid}`), currentVal => {
-      if(!currentVal) return currentVal;
-      currentVal.requests = ensureArray(currentVal.requests).filter(r => r !== senderUid);
-      return currentVal;
+    // OUTGOING
+    outgoingList.innerHTML = '';
+    noOutgoing.style.display = outgoing.length === 0 ? 'block' : 'none';
+    outgoing.forEach(uid => {
+      const u = usersCache[uid]; if(!u) return;
+      const row = document.createElement('div'); row.className='user-row';
+      const left = document.createElement('div'); left.className='user-left';
+      left.appendChild(avatar(u.email));
+      left.innerHTML += `<div><div style="font-weight:700">${escapeHtml(u.displayName||u.email||uid)}</div><div class="small-muted">${escapeHtml(u.email||'')}</div></div>`;
+      row.appendChild(left);
+      const right = document.createElement('div');
+      const cancel = document.createElement('button'); cancel.className='btn btn-sm btn-outline-secondary'; cancel.textContent='Cancel';
+      cancel.onclick = ()=> cancelRequest(uid);
+      right.appendChild(cancel); row.appendChild(right);
+      outgoingList.appendChild(row);
     });
-  } catch(err){
-    console.error('declineRequest err', err);
-    alert('Failed to decline request');
+
+    // ALL USERS
+    allUsersList.innerHTML = '';
+    const q = (searchAll.value||'').trim().toLowerCase();
+    const keys = Object.keys(usersCache).sort((a,b)=> (usersCache[a].email||'').localeCompare(usersCache[b].email||''));
+    let any=false;
+    keys.forEach(uid => {
+      if(uid === currentUser.uid) return;
+      const u = usersCache[uid];
+      const isFriend = myFriends.includes(uid);
+      const isIncoming = myRequests.includes(uid);
+      if(isFriend || isIncoming) return;
+      if(q && !((u.email||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q))) return;
+      any = true;
+      const row = document.createElement('div'); row.className='user-row';
+      const left = document.createElement('div'); left.className='user-left';
+      left.appendChild(avatar(u.email));
+      left.innerHTML += `<div><div style="font-weight:700">${escapeHtml(u.displayName||u.email||uid)}</div><div class="small-muted">${escapeHtml(u.email||'')}</div></div>`;
+      row.appendChild(left);
+      const right = document.createElement('div');
+      const theirReq = Array.isArray(u.requests) ? u.requests : Object.values(u.requests || []);
+      if(theirReq.includes(currentUser.uid)){
+        const btnCancel = document.createElement('button'); btnCancel.className='btn btn-sm btn-outline-secondary'; btnCancel.textContent='Cancel';
+        btnCancel.onclick = ()=> cancelRequest(uid);
+        right.appendChild(btnCancel);
+      } else {
+        const btnAdd = document.createElement('button'); btnAdd.className='btn btn-sm btn-primary'; btnAdd.textContent='Add';
+        btnAdd.onclick = ()=> sendRequest(uid);
+        right.appendChild(btnAdd);
+      }
+      row.appendChild(right); allUsersList.appendChild(row);
+    });
+    noUsers.style.display = any ? 'none' : 'block';
   }
-}
 
-/* ------------------ Chat ------------------ */
-function openChat(uid){
-  activeChatUid = uid;
-  const u = usersCache[uid] || {};
-  chatWith.textContent = `Chatting with: ${u.displayName || u.email || uid}`;
-  loadChat(uid);
-  if(window.innerWidth < 840) document.querySelector('.left-col').classList.add('d-none');
-}
+  // ---------- requests ops ----------
+  async function sendRequest(uid){
+    if(!currentUser) return alert('Login required');
+    showLoader(true);
+    try {
+      await runTransaction(ref(db, `users/${uid}`), cur => {
+        if(!cur) return cur;
+        cur.requests = cur.requests || [];
+        if(!cur.requests.includes(currentUser.uid)) cur.requests.push(currentUser.uid);
+        return cur;
+      });
+    } catch(e){ console.error(e); }
+    await reloadUsers();
+  }
+  async function cancelRequest(uid){
+    if(!currentUser) return;
+    showLoader(true);
+    try {
+      await runTransaction(ref(db, `users/${uid}`), cur => {
+        if(!cur) return cur;
+        cur.requests = (cur.requests || []).filter(r => r !== currentUser.uid);
+        return cur;
+      });
+    } catch(e){ console.error(e); }
+    await reloadUsers();
+  }
+  async function acceptRequest(uid){
+    if(!currentUser) return;
+    showLoader(true);
+    try {
+      await runTransaction(ref(db, `users/${currentUser.uid}`), me => {
+        if(!me) return me;
+        me.requests = (me.requests || []).filter(r => r !== uid);
+        me.friends = me.friends || [];
+        if(!me.friends.includes(uid)) me.friends.push(uid);
+        return me;
+      });
+      await runTransaction(ref(db, `users/${uid}`), them => {
+        if(!them) return them;
+        them.friends = them.friends || [];
+        if(!them.friends.includes(currentUser.uid)) them.friends.push(currentUser.uid);
+        them.requests = (them.requests || []).filter(r => r !== currentUser.uid);
+        return them;
+      });
+    } catch(e){ console.error(e); }
+    await reloadUsers();
+  }
+  async function declineRequest(uid){
+    if(!currentUser) return;
+    showLoader(true);
+    try {
+      await runTransaction(ref(db, `users/${currentUser.uid}`), me => {
+        if(!me) return me;
+        me.requests = (me.requests || []).filter(r => r !== uid);
+        return me;
+      });
+    } catch(e){ console.error(e); }
+    await reloadUsers();
+  }
 
-function loadChat(uid){
-  if(!currentUid || !uid) return;
-  const key = chatKey(currentUid, uid);
-  const chatRef = ref(db, `messages/${key}`);
-  chatMeta.textContent = '';
-  onValue(chatRef, snap => {
+  // ---------- chat: read/delivered ----------
+  function chatKey(a,b){ return a < b ? `${a}_${b}` : `${b}_${a}`; }
+
+  async function openChat(uid, email){
+    activeFriend = { id: uid, email };
+    chatWith.textContent = email;
+    const st = statuses[uid];
+    chatMeta.textContent = st && st.online ? 'Online' : (st && st.lastOnline ? 'Last seen ' + new Date(st.lastOnline).toLocaleString() : '');
+    btnRemoveFriend.classList.remove('d-none');
+    if(window.innerWidth < 992) document.querySelector('.right').classList.add('open');
+    await reloadMessages(uid);
+    attachRealtimeMessages(uid);
+    await markMessagesRead(uid);
+  }
+
+  async function reloadMessages(uid){
+    if(!currentUser) return;
+    showLoader(true);
+    try {
+      const key = chatKey(currentUser.uid, uid);
+      const snap = await get(ref(db, `messages/${key}`));
+      const msgs = snap.val() || {};
+      renderMessages(msgs);
+    } catch(e){ console.error(e); }
+    showLoader(false);
+  }
+
+  function renderMessages(msgs){
     chatContainer.innerHTML = '';
-    const msgs = snap.exists() ? snap.val() : {};
-    const arr = Object.entries(msgs).sort((a,b) => (a[1].timestamp||0) - (b[1].timestamp||0));
-    arr.forEach(([k,msg]) => {
+    const arr = Object.entries(msgs || {}).sort((a,b)=> (a[1].time||0) - (b[1].time||0));
+    arr.forEach(([id,m])=>{
       const div = document.createElement('div');
-      const cls = (msg.sender === currentUid) ? 'receiver' : 'sender';
-      div.className = `message ${cls}`;
-      const senderLabel = msg.sender === currentUid ? 'You' : (usersCache[msg.sender]?.displayName || usersCache[msg.sender]?.email || msg.sender);
-      div.innerHTML = `<div><strong>${escapeHtml(senderLabel)}</strong>: ${escapeHtml(msg.text)}</div><div class="small-muted" style="margin-top:6px">${fmtTime(msg.timestamp)}</div>`;
+      div.className = 'msg ' + (m.from === currentUser.uid ? 'me' : 'them');
+      let ticksHtml = '';
+      if(m.from === currentUser.uid){
+        const delivered = !!m.delivered;
+        const read = !!m.read;
+        if(read) ticksHtml = `<span class="ticks read">✓✓</span>`;
+        else if(delivered) ticksHtml = `<span class="ticks">✓✓</span>`;
+        else ticksHtml = `<span class="ticks">✓</span>`;
+      }
+      div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="msg-meta">${fmtTime(m.time)} ${ticksHtml}</div>`;
       chatContainer.appendChild(div);
     });
     chatContainer.scrollTop = chatContainer.scrollHeight;
-  }, err => {
-    console.error('chat onValue err', err);
-  });
-}
-
-sendBtn.onclick = async () => {
-  if(!currentUid) return alert('Login required');
-  if(!activeChatUid) return alert('Select friend');
-  const text = messageInput.value.trim(); if(!text) return;
-  try{
-    const key = chatKey(currentUid, activeChatUid);
-    await push(ref(db, `messages/${key}`), { sender: currentUid, text, timestamp: Date.now() });
-    messageInput.value = '';
-  } catch(err){
-    console.error('sendMessage err', err);
-    alert('Failed to send message');
   }
-};
 
-/* ------------------ Search debounce ------------------ */
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(renderLists, 240);
-});
+  function attachRealtimeMessages(uid){
+    if(messagesUnsub) messagesUnsub();
+    const key = chatKey(currentUser.uid, uid);
+    const msgsRef = ref(db, `messages/${key}`);
+    messagesUnsub = onValue(msgsRef, snap => {
+      const msgs = snap.val() || {};
+      renderMessages(msgs);
+      markMessagesRead(uid).catch(e=>console.error(e));
+    }, err => console.error(err));
+  }
 
-/* ------------------ small UX touches ------------------ */
-// Enter key for login/signup
-signupPass.addEventListener('keydown', e => { if(e.key === 'Enter') signupBtn.click(); });
-loginPass.addEventListener('keydown', e => { if(e.key === 'Enter') loginBtn.click(); });
-messageInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendBtn.click(); });
+  async function markMessagesRead(otherUid){
+    if(!currentUser) return;
+    const key = chatKey(currentUser.uid, otherUid);
+    const snap = await get(ref(db, `messages/${key}`));
+    const msgs = snap.val() || {};
+    const updates = [];
+    for(const k in msgs){
+      const m = msgs[k];
+      if(m.from === otherUid && !m.read){
+        updates.push(k);
+      }
+    }
+    await Promise.all(updates.map(k => update(ref(db, `messages/${key}/${k}`), { read: true })));
+  }
 
-/* ------------------ initial focus ------------------ */
-signupName.focus();
+  // send message: push then mark delivered true
+  btnSend.addEventListener('click', async () => {
+    if(!activeFriend || !currentUser) return alert('Select friend and sign in');
+    const text = (inpMsg.value||'').trim();
+    if(!text) return;
+    try {
+      const key = chatKey(currentUser.uid, activeFriend.id);
+      const p = await push(ref(db, `messages/${key}`), { from: currentUser.uid, to: activeFriend.id, text, time: Date.now(), delivered: false, read: false });
+      await update(ref(db, `messages/${key}/${p.key}`), { delivered: true });
+      inpMsg.value = '';
+    } catch(e){ console.error(e); }
+  });
 
-/* ------------------ debug helper ------------------ */
-window._chatDebug = { auth, db, usersCache };
+  // remove friend
+  btnRemoveFriend.addEventListener('click', async () => {
+    if(!activeFriend || !currentUser) return;
+    if(!confirm(`Remove ${activeFriend.email}?`)) return;
+    showLoader(true);
+    try {
+      await runTransaction(ref(db, `users/${currentUser.uid}`), me => {
+        if(!me) return me;
+        me.friends = (me.friends||[]).filter(f => f !== activeFriend.id);
+        return me;
+      });
+      await runTransaction(ref(db, `users/${activeFriend.id}`), them => {
+        if(!them) return them;
+        them.friends = (them.friends||[]).filter(f => f !== currentUser.uid);
+        return them;
+      });
+    } catch(e){ console.error(e); }
+    await reloadUsers();
+    if(window.innerWidth < 992) btnBack.click();
+    showLoader(false);
+  });
+
+  // manual reload
+  btnReload.addEventListener('click', async () => {
+    await reloadUsers();
+    if(activeFriend) await reloadMessages(activeFriend.id);
+  });
+
+  // back behavior
+  btnBack.addEventListener('click', ()=> {
+    document.querySelector('.right').classList.remove('open');
+    if(messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
+    activeFriend = null;
+    btnRemoveFriend.classList.add('d-none');
+  });
+
+  // search
+  searchAll.addEventListener('input', ()=> renderLists());
+
+  // initial UI & modal instance
+  (function init(){
+    chatContainer.innerHTML = '<div class="small-muted p-3">Sign in to start</div>';
+    setTimeout(()=> {
+      if(window.bootstrap){
+        authModal = new bootstrap.Modal(authModalEl, { backdrop:'static', keyboard:false });
+        authModalEl.addEventListener('shown.bs.modal', ()=> {
+          if(authMode === 'signup') modalName.focus(); else modalEmail.focus();
+        });
+        setAuthMode('login');
+      }
+    }, 200);
+  })();
+
+  // expose small helpers for debugging
+  window._aqc = { reloadUsers, reloadMessages: async (uid) => { if(uid) await reloadMessages(uid); }, openChat, cleanDuplicateUsers };
 
 </script>
+
+<!-- Bootstrap JS bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
